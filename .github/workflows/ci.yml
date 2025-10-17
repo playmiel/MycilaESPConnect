@@ -1,0 +1,196 @@
+# yaml-language-server: $schema=https://json.schemastore.org/github-workflow.json
+
+name: Build
+
+on:
+  workflow_dispatch:
+  push:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cpplint:
+    name: cpplint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Cache
+        uses: actions/cache@v4
+        with:
+          key: ${{ runner.os }}-cpplint
+          path: ~/.cache/pip
+
+      - name: Pyhton
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+
+      - name: cpplint
+        run: |
+          python -m pip install --upgrade pip
+          pip install --upgrade cpplint
+          cpplint \
+            --repository=. \
+            --recursive \
+            --filter=-whitespace/line_length,-whitespace/braces,-whitespace/comments,-runtime/indentation_namespace,-whitespace/indent,-readability/braces,-whitespace/newline,-readability/todo,-build/c++11 \
+            --exclude=src/espconnect_webpage.h \
+            --exclude=src/backport/* \
+            src
+
+  platformio-ci-esp32:
+    name: "pio:${{ matrix.board }}:${{ matrix.platform }}"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: https://github.com/pioarduino/platform-espressif32/releases/download/55.03.32/platform-espressif32.zip
+            board: esp32dev
+          - platform: https://github.com/pioarduino/platform-espressif32/releases/download/55.03.32/platform-espressif32.zip
+            board: esp32-s2-saola-1
+          - platform: https://github.com/pioarduino/platform-espressif32/releases/download/55.03.32/platform-espressif32.zip
+            board: esp32-s3-devkitc-1
+          - platform: https://github.com/pioarduino/platform-espressif32/releases/download/55.03.32/platform-espressif32.zip
+            board: esp32-c3-devkitc-02
+          - platform: https://github.com/pioarduino/platform-espressif32/releases/download/55.03.32/platform-espressif32.zip
+            board: esp32-c6-devkitc-1
+
+          - platform: https://github.com/pioarduino/platform-espressif32/releases/download/54.03.20-rc2/platform-espressif32.zip
+            board: esp32dev
+          - platform: https://github.com/pioarduino/platform-espressif32/releases/download/54.03.20-rc2/platform-espressif32.zip
+            board: esp32-s2-saola-1
+          - platform: https://github.com/pioarduino/platform-espressif32/releases/download/54.03.20-rc2/platform-espressif32.zip
+            board: esp32-s3-devkitc-1
+          - platform: https://github.com/pioarduino/platform-espressif32/releases/download/54.03.20-rc2/platform-espressif32.zip
+            board: esp32-c3-devkitc-02
+          - platform: https://github.com/pioarduino/platform-espressif32/releases/download/54.03.20-rc2/platform-espressif32.zip
+            board: esp32-c6-devkitc-1
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          key: ${{ runner.os }}-pio
+          path: |
+            ~/.cache/pip
+            ~/.platformio
+
+      - name: Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+
+      - name: Build
+        run: |
+          python -m pip install --upgrade pip
+          pip install --upgrade platformio
+          pip install --upgrade intelhex
+
+      - run: PLATFORMIO_SRC_DIR=examples/BlockingCaptivePortal PIO_BOARD=${{ matrix.board }} PIO_PLATFORM=${{ matrix.platform }} pio run -e ci
+      - run: PLATFORMIO_SRC_DIR=examples/NonBlockingCaptivePortal PIO_BOARD=${{ matrix.board }} PIO_PLATFORM=${{ matrix.platform }} pio run -e ci
+      - run: PLATFORMIO_SRC_DIR=examples/AdvancedCaptivePortal PIO_BOARD=${{ matrix.board }} PIO_PLATFORM=${{ matrix.platform }} pio run -e ci
+      - run: PLATFORMIO_SRC_DIR=examples/WiFiStaticIP PIO_BOARD=${{ matrix.board }} PIO_PLATFORM=${{ matrix.platform }} pio run -e ci
+      - run: PLATFORMIO_SRC_DIR=examples/LoadSaveConfig PIO_BOARD=${{ matrix.board }} PIO_PLATFORM=${{ matrix.platform }} pio run -e ci
+
+      - run: PLATFORMIO_BUILD_FLAGS="-DESPCONNECT_NO_MDNS" PLATFORMIO_SRC_DIR=examples/AdvancedCaptivePortal PIO_BOARD=${{ matrix.board }} PIO_PLATFORM=${{ matrix.platform }} pio run -e ci
+      - run: PLATFORMIO_BUILD_FLAGS="-DESPCONNECT_NO_STD_STRING" PLATFORMIO_SRC_DIR=examples/AdvancedCaptivePortal PIO_BOARD=${{ matrix.board }} PIO_PLATFORM=${{ matrix.platform }} pio run -e ci
+      - run: PLATFORMIO_BUILD_FLAGS="-DESPCONNECT_NO_CAPTIVE_PORTAL" PLATFORMIO_SRC_DIR=examples/NoCaptivePortal PIO_BOARD=${{ matrix.board }} PIO_PLATFORM=${{ matrix.platform }} pio run -e ci
+      - run: PLATFORMIO_BUILD_FLAGS="-DESPCONNECT_NO_LOGGING" PLATFORMIO_SRC_DIR=examples/AdvancedCaptivePortal PIO_BOARD=${{ matrix.board }} PIO_PLATFORM=${{ matrix.platform }} pio run -e ci
+      - run: PLATFORMIO_BUILD_FLAGS="-DESPCONNECT_NO_COMPAT_CP" PLATFORMIO_SRC_DIR=examples/AdvancedCaptivePortal PIO_BOARD=${{ matrix.board }} PIO_PLATFORM=${{ matrix.platform }} pio run -e ci
+
+  platformio-ci-esp8266:
+    name: "pio:${{ matrix.board }}:${{ matrix.platform }}"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: espressif8266
+            board: huzzah
+          - platform: espressif8266
+            board: d1_mini
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          key: ${{ runner.os }}-pio
+          path: |
+            ~/.cache/pip
+            ~/.platformio
+
+      - name: Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+
+      - name: Build
+        run: |
+          python -m pip install --upgrade pip
+          pip install --upgrade platformio
+          pip install --upgrade intelhex
+
+      - run: PLATFORMIO_SRC_DIR=examples/BlockingCaptivePortal PIO_BOARD=${{ matrix.board }} PIO_PLATFORM=${{ matrix.platform }} pio run -e ci-esp8266
+      - run: PLATFORMIO_SRC_DIR=examples/NonBlockingCaptivePortal PIO_BOARD=${{ matrix.board }} PIO_PLATFORM=${{ matrix.platform }} pio run -e ci-esp8266
+      - run: PLATFORMIO_SRC_DIR=examples/AdvancedCaptivePortal PIO_BOARD=${{ matrix.board }} PIO_PLATFORM=${{ matrix.platform }} pio run -e ci-esp8266
+      - run: PLATFORMIO_SRC_DIR=examples/WiFiStaticIP PIO_BOARD=${{ matrix.board }} PIO_PLATFORM=${{ matrix.platform }} pio run -e ci-esp8266
+      - run: PLATFORMIO_SRC_DIR=examples/LoadSaveConfig PIO_BOARD=${{ matrix.board }} PIO_PLATFORM=${{ matrix.platform }} pio run -e ci-esp8266
+
+      - run: PLATFORMIO_BUILD_FLAGS="-DESPCONNECT_NO_MDNS" PLATFORMIO_SRC_DIR=examples/AdvancedCaptivePortal PIO_BOARD=${{ matrix.board }} PIO_PLATFORM=${{ matrix.platform }} pio run -e ci-esp8266
+      - run: PLATFORMIO_BUILD_FLAGS="-DESPCONNECT_NO_STD_STRING" PLATFORMIO_SRC_DIR=examples/AdvancedCaptivePortal PIO_BOARD=${{ matrix.board }} PIO_PLATFORM=${{ matrix.platform }} pio run -e ci-esp8266
+      - run: PLATFORMIO_BUILD_FLAGS="-DESPCONNECT_NO_CAPTIVE_PORTAL" PLATFORMIO_SRC_DIR=examples/NoCaptivePortal PIO_BOARD=${{ matrix.board }} PIO_PLATFORM=${{ matrix.platform }} pio run -e ci-esp8266
+      - run: PLATFORMIO_BUILD_FLAGS="-DESPCONNECT_NO_LOGGING" PLATFORMIO_SRC_DIR=examples/AdvancedCaptivePortal PIO_BOARD=${{ matrix.board }} PIO_PLATFORM=${{ matrix.platform }} pio run -e ci-esp8266
+
+  platformio-eth:
+    name: "pio:${{ matrix.board }}:${{ matrix.platform }}"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # platform: [arduino-3, arduino-rc]
+        platform: [arduino-3]
+        board: [esp32-poe, wt32-eth01, lilygo-eth-lite-s3]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Cache PlatformIO
+        uses: actions/cache@v4
+        with:
+          key: ${{ runner.os }}-pio
+          path: |
+            ~/.cache/pip
+            ~/.platformio
+
+      - name: Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.x"
+
+      - name: Build
+        run: |
+          python -m pip install --upgrade pip
+          pip install --upgrade platformio
+          pip install --upgrade intelhex
+
+      - run: PLATFORMIO_SRC_DIR=examples/BlockingCaptivePortal pio run -e ${{ matrix.board }}-${{ matrix.platform }}
+      - run: PLATFORMIO_SRC_DIR=examples/NonBlockingCaptivePortal pio run -e ${{ matrix.board }}-${{ matrix.platform }}
+      - run: PLATFORMIO_SRC_DIR=examples/AdvancedCaptivePortal pio run -e ${{ matrix.board }}-${{ matrix.platform }}
+      - run: PLATFORMIO_SRC_DIR=examples/WiFiStaticIP pio run -e ${{ matrix.board }}-${{ matrix.platform }}
+      - run: PLATFORMIO_SRC_DIR=examples/LoadSaveConfig pio run -e ${{ matrix.board }}-${{ matrix.platform }}
+
+      - run: PLATFORMIO_BUILD_FLAGS="-DESPCONNECT_NO_MDNS" PLATFORMIO_SRC_DIR=examples/AdvancedCaptivePortal pio run -e ${{ matrix.board }}-${{ matrix.platform }}
+      - run: PLATFORMIO_BUILD_FLAGS="-DESPCONNECT_NO_STD_STRING" PLATFORMIO_SRC_DIR=examples/AdvancedCaptivePortal pio run -e ${{ matrix.board }}-${{ matrix.platform }}
+      - run: PLATFORMIO_BUILD_FLAGS="-DESPCONNECT_NO_CAPTIVE_PORTAL" PLATFORMIO_SRC_DIR=examples/NoCaptivePortal pio run -e ${{ matrix.board }}-${{ matrix.platform }}
+      - run: PLATFORMIO_BUILD_FLAGS="-DESPCONNECT_NO_LOGGING" PLATFORMIO_SRC_DIR=examples/AdvancedCaptivePortal pio run -e ${{ matrix.board }}-${{ matrix.platform }}
