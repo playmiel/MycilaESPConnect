@@ -57,3 +57,63 @@ void Mycila::ESPConnect::_startSTA() {
 
   LOGD(TAG, "WiFi started.");
 }
+
+bool Mycila::ESPConnect::_testWiFiCredentials(const ESPCONNECT_STRING& ssid, const ESPCONNECT_STRING& password, const ESPCONNECT_STRING& bssid, uint32_t timeoutSec) {
+  // Preserve current WiFi mode to restore later
+  wifi_mode_t previousMode = WiFi.getMode();
+
+  // Configure station for a quick test without persistent side-effects
+  WiFi.persistent(false);
+  WiFi.setAutoReconnect(false);
+  WiFi.setSleep(false);
+
+  // Keep AP active if it was on, so captive portal stays reachable
+  if (previousMode == WIFI_MODE_AP || previousMode == WIFI_MODE_APSTA) {
+    WiFi.mode(WIFI_MODE_APSTA);
+  } else {
+    WiFi.mode(WIFI_MODE_STA);
+  }
+
+#ifndef ESP8266
+  WiFi.setScanMethod(WIFI_ALL_CHANNEL_SCAN);
+  WiFi.setSortMethod(WIFI_CONNECT_AP_BY_SIGNAL);
+#endif
+
+  // Start connection attempt
+  if (bssid.length()) {
+    MacAddress mac(MACType::MAC6);
+    mac.fromString(bssid.c_str());
+    WiFi.begin(ssid.c_str(), password.c_str(), 0, mac);
+  } else {
+    WiFi.begin(ssid.c_str(), password.c_str());
+  }
+
+  unsigned long start = millis();
+  bool ok = false;
+  while (millis() - start < timeoutSec * 1000UL) {
+    // Check IPv4 assigned as success criteria
+    if (WiFi.status() == WL_CONNECTED && WiFi.localIP()[0] != 0) {
+      ok = true;
+      break;
+    }
+    delay(50);
+  }
+
+  // Cleanup: disconnect the STA side of the test so portal flow can continue cleanly
+  if (!ok) {
+    WiFi.disconnect(true);
+  }
+
+  // Restore previous mode: if AP was active, keep it; otherwise return to NULL to let normal flow restart STA later
+  if (previousMode == WIFI_MODE_AP) {
+    WiFi.mode(WIFI_MODE_AP);
+  } else if (previousMode == WIFI_MODE_APSTA) {
+    WiFi.mode(WIFI_MODE_APSTA);
+  } else if (previousMode == WIFI_MODE_STA) {
+    WiFi.mode(WIFI_MODE_STA);
+  } else {
+    WiFi.mode(WIFI_MODE_NULL);
+  }
+
+  return ok;
+}
