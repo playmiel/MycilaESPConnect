@@ -295,6 +295,9 @@ namespace Mycila {
       void _startCaptivePortal();
       void _stopCaptivePortal();
       void _scan();
+      // Test a WiFi connection attempt while portal/AP is running; does not change state.
+      // Returns true if a connection is established within timeoutSec.
+      bool _testWiFiCredentials(const ESPCONNECT_STRING& ssid, const ESPCONNECT_STRING& password, const ESPCONNECT_STRING& bssid, uint32_t timeoutSec);
 #endif
   };
 } // namespace Mycila

@@ -89,16 +89,28 @@ void Mycila::ESPConnect::_startCaptivePortal() {
       } else {
         ESPCONNECT_STRING ssid;
         ESPCONNECT_STRING password;
+        ESPCONNECT_STRING bssid;
         if (request->hasParam("ssid", true))
           ssid = request->getParam("ssid", true)->value().c_str();
         if (request->hasParam("password", true))
           password = request->getParam("password", true)->value().c_str();
+        if (request->hasParam("bssid", true))
+          bssid = request->getParam("bssid", true)->value().c_str();
         if (!ssid.length())
           return request->send(400, "application/json", "{\"message\":\"Invalid SSID\"}");
         if (ssid.length() > 32 || password.length() > 64 || (password.length() && password.length() < 8))
           return request->send(400, "application/json", "{\"message\":\"Credentials exceed character limit of 32 & 64 respectively, or password lower than 8 characters.\"}");
+        // Try WiFi connection test before saving and closing portal
+        const uint32_t testTimeoutSec = 10; // quick validation timeout
+        bool ok = _testWiFiCredentials(ssid, password, bssid, testTimeoutSec);
+        if (!ok) {
+          // Return error and keep portal running
+          return request->send(400, "application/json", "{\"message\":\"Échec de connexion au WiFi. Vérifiez le mot de passe et réessayez.\"}");
+        }
+        // Success: persist config and proceed as before
         _config.wifiSSID = ssid;
         _config.wifiPassword = password;
+        _config.wifiBSSID = bssid;
         request->send(200, "application/json", "{\"message\":\"Configuration Saved.\"}");
         _setState(Mycila::ESPConnect::State::PORTAL_COMPLETE);
       }

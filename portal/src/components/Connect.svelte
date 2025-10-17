@@ -8,9 +8,11 @@
   export let ap_mode;
   let loading = false;
   let password = "";
+  let errorMessage = "";
 
   async function connect(){
     loading = true;
+    errorMessage = "";
     let formData = new FormData();
     formData.append('bssid', bssid || "");
     formData.append('ssid', ssid || "");
@@ -20,7 +22,21 @@
 		if (res.status === 200) {
       dispatch('success');
 		} else {
-      dispatch('error');
+      try {
+        const txt = await res.text();
+        // Try to parse JSON message if available
+        if (txt && txt.trim().startsWith('{')) {
+          const j = JSON.parse(txt);
+          errorMessage = j.message || 'Connexion WiFi échouée. Veuillez vérifier vos identifiants.';
+        } else if (txt) {
+          errorMessage = txt;
+        } else {
+          errorMessage = 'Connexion WiFi échouée. Veuillez vérifier vos identifiants.';
+        }
+      } catch (e) {
+        errorMessage = 'Connexion WiFi échouée. Veuillez vérifier vos identifiants.';
+      }
+      // Ne pas quitter le formulaire: pas de dispatch('error') ici
     }
     loading = false;
 		return res;
@@ -72,7 +88,16 @@
       {#if !open}
       <div class="row">
         <div class="column column-100">
-          <input type="text" placeholder="WiFi Password" id="password" bind:value={password} disabled={loading} autocomplete="off" required minlength="8">
+          <input type="password" placeholder="WiFi Password" id="password" bind:value={password} disabled={loading} autocomplete="off" required minlength="8">
+        </div>
+      </div>
+      {/if}
+      {#if errorMessage}
+      <div class="row">
+        <div class="column column-100">
+          <div class="error-box">
+            {errorMessage}
+          </div>
         </div>
       </div>
       {/if}
@@ -96,3 +121,14 @@
   </div>
 </form>
 {/if}
+
+<style>
+  .error-box{
+    background: #fde9e9;
+    color: #b00020;
+    border: 1px solid #f5c2c2;
+    padding: 0.75rem 1rem;
+    border-radius: .5rem;
+    margin-top: .5rem;
+  }
+</style>
