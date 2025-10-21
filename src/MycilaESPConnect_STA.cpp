@@ -96,7 +96,13 @@ bool Mycila::ESPConnect::_testWiFiCredentials(const ESPCONNECT_STRING& ssid, con
       ok = true;
       break;
     }
-    delay(50);
+    // Let DNS server and async tasks process requests
+    if (_dnsServer != nullptr) {
+      _dnsServer->processNextRequest();
+    }
+    // Yield to other tasks and watchdog
+    yield();
+    delay(100);
   }
 
   // Cleanup: disconnect the STA side of the test so portal flow can continue cleanly

@@ -27,16 +27,16 @@
         // Try to parse JSON message if available
         if (txt && txt.trim().startsWith('{')) {
           const j = JSON.parse(txt);
-          errorMessage = j.message || 'Connexion WiFi échouée. Veuillez vérifier vos identifiants.';
+          errorMessage = j.message || 'WiFi connection failed. Please verify your credentials.';
         } else if (txt) {
           errorMessage = txt;
         } else {
-          errorMessage = 'Connexion WiFi échouée. Veuillez vérifier vos identifiants.';
+          errorMessage = 'WiFi connection failed. Please verify your credentials.';
         }
       } catch (e) {
-        errorMessage = 'Connexion WiFi échouée. Veuillez vérifier vos identifiants.';
+        errorMessage = 'WiFi connection failed. Please verify your credentials.';
       }
-      // Ne pas quitter le formulaire: pas de dispatch('error') ici
+      // Keep the form visible: do not dispatch('error') here
     }
     loading = false;
 		return res;

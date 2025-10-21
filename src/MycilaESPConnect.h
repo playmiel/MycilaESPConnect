@@ -19,6 +19,7 @@
 #endif
 
 #include <utility>
+#include <memory>
 
 #ifdef ESPCONNECT_NO_STD_STRING
   #include <WString.h>
@@ -298,6 +299,25 @@ namespace Mycila {
       // Test a WiFi connection attempt while portal/AP is running; does not change state.
       // Returns true if a connection is established within timeoutSec.
       bool _testWiFiCredentials(const ESPCONNECT_STRING& ssid, const ESPCONNECT_STRING& password, const ESPCONNECT_STRING& bssid, uint32_t timeoutSec);
+
+      struct CredentialTestContext {
+          AsyncWebServerRequest* request = nullptr;
+          AsyncWebServerRequestPtr requestHolder;
+          ESPCONNECT_STRING ssid;
+          ESPCONNECT_STRING password;
+          ESPCONNECT_STRING bssid;
+          uint32_t timeoutSec = 0;
+          uint32_t startMillis = 0;
+          wifi_mode_t previousMode = WIFI_MODE_NULL;
+          bool started = false;
+      };
+
+      CredentialTestContext _credentialTest;
+      void _queueCredentialTest(AsyncWebServerRequest* request, const ESPCONNECT_STRING& ssid, const ESPCONNECT_STRING& password, const ESPCONNECT_STRING& bssid, uint32_t timeoutSec);
+      void _processCredentialTest();
+      void _handleCredentialTestCancellation(AsyncWebServerRequest* request);
+      void _completeCredentialTest(bool success, bool sendResponse);
+      void _resetCredentialTestContext();
 #endif
   };
 } // namespace Mycila
