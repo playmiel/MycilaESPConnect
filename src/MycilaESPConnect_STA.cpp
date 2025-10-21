@@ -59,6 +59,7 @@ void Mycila::ESPConnect::_startSTA() {
 }
 
 bool Mycila::ESPConnect::_testWiFiCredentials(const ESPCONNECT_STRING& ssid, const ESPCONNECT_STRING& password, const ESPCONNECT_STRING& bssid, uint32_t timeoutSec) {
+#ifndef ESPCONNECT_NO_CAPTIVE_PORTAL
   // Preserve current WiFi mode to restore later
   wifi_mode_t previousMode = WiFi.getMode();
 
@@ -122,4 +123,11 @@ bool Mycila::ESPConnect::_testWiFiCredentials(const ESPCONNECT_STRING& ssid, con
   }
 
   return ok;
+#else
+  (void)ssid;
+  (void)password;
+  (void)bssid;
+  (void)timeoutSec;
+  return false;
+#endif
 }
