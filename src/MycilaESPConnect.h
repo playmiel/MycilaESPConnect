@@ -21,6 +21,8 @@
 #include <utility>
 #include <memory>
 
+#include "MycilaESPConnect_Includes.h"
+
 #ifdef ESPCONNECT_NO_STD_STRING
   #include <WString.h>
   #define ESPCONNECT_STRING String

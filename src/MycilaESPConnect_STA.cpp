@@ -88,7 +88,7 @@ bool Mycila::ESPConnect::_testWiFiCredentials(const ESPCONNECT_STRING& ssid, con
     WiFi.begin(ssid.c_str(), password.c_str());
   }
 
-  unsigned long start = millis();
+  uint32_t start = millis();
   bool ok = false;
   while (millis() - start < timeoutSec * 1000UL) {
     // Check IPv4 assigned as success criteria
