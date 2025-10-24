@@ -28,7 +28,7 @@ void Mycila::ESPConnect::_startCaptivePortal() {
 
   // Configure AP with specific IP range so devices recognize it as a captive portal
   WiFi.softAPConfig(IPAddress(4, 3, 2, 1), IPAddress(4, 3, 2, 1), IPAddress(255, 255, 255, 0));
-  WiFi.mode(WIFI_MODE_AP);
+  WiFi.mode(WIFI_MODE_APSTA);
 
   if (!_apPassword.length() || _apPassword.length() < 8) {
     // Disabling invalid Access Point password which must be at least 8 characters long when set
@@ -221,6 +221,11 @@ void Mycila::ESPConnect::_processCredentialTest() {
     return;
 
   if (!_credentialTest.started) {
+    if (_dnsServer != nullptr && !_credentialTest.dnsServerPaused) {
+      _dnsServer->stop();
+      _credentialTest.dnsServerPaused = true;
+    }
+
     WiFi.persistent(false);
     WiFi.setAutoReconnect(false);
     WiFi.setSleep(false);
@@ -293,6 +298,12 @@ void Mycila::ESPConnect::_completeCredentialTest(bool success, bool sendResponse
     }
 
     _credentialTest.started = false;
+  }
+
+  if (_credentialTest.dnsServerPaused && _dnsServer != nullptr) {
+    _dnsServer->setErrorReplyCode(DNSReplyCode::NoError);
+    _dnsServer->start(53, "*", WiFi.softAPIP());
+    _credentialTest.dnsServerPaused = false;
   }
 
   AsyncWebServerRequest* request = nullptr;

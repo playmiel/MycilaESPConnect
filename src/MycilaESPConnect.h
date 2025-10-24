@@ -309,6 +309,7 @@ namespace Mycila {
           uint32_t startMillis = 0;
           wifi_mode_t previousMode = WIFI_MODE_NULL;
           bool started = false;
+          bool dnsServerPaused = false;
       };
 
       CredentialTestContext _credentialTest;
