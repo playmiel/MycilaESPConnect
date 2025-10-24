@@ -22,20 +22,13 @@
 		if (res.status === 200) {
       dispatch('success');
 		} else {
+      errorMessage = 'WiFi connection failed. Please verify your credentials.';
       try {
         const txt = await res.text();
-        // Try to parse JSON message if available
-        if (txt && txt.trim().startsWith('{')) {
-          const j = JSON.parse(txt);
-          errorMessage = j.message || 'WiFi connection failed. Please verify your credentials.';
-        } else if (txt) {
-          errorMessage = txt;
-        } else {
-          errorMessage = 'WiFi connection failed. Please verify your credentials.';
+        if (txt) {
+          errorMessage = txt.trim().startsWith('{') ? (JSON.parse(txt).message || errorMessage) : txt;
         }
-      } catch (e) {
-        errorMessage = 'WiFi connection failed. Please verify your credentials.';
-      }
+      } catch (e) { }
       // Keep the form visible: do not dispatch('error') here
     }
     loading = false;
