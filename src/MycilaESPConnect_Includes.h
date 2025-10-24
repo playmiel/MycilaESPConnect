@@ -4,6 +4,8 @@
  */
 #pragma once
 
+#include <cstdint>
+
 #ifdef ESP8266
   #define wifi_mode_t                         WiFiMode_t
   #define WIFI_MODE_STA                       WIFI_STA
@@ -17,6 +19,16 @@
   #define ARDUINO_EVENT_WIFI_AP_START         WIFI_EVENT_SOFTAPMODE_STACONNECTED
 #else
   #include <esp_mac.h>
+#endif
+
+#if !defined(WIFI_MODE_NULL)
+  // Provide stub WiFi mode definitions so host builds (e.g. CI without WiFi stack)
+  // still compile. Only used for comparisons and defaults.
+  typedef uint8_t wifi_mode_t;
+  #define WIFI_MODE_NULL 0
+  #define WIFI_MODE_STA 1
+  #define WIFI_MODE_AP 2
+  #define WIFI_MODE_APSTA 3
 #endif
 
 #if __has_include(<MacAddress.h>)
